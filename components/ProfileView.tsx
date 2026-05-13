@@ -1,7 +1,7 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { Tag, Wand2, type LucideIcon } from "lucide-react";
+import { CalendarPlus, Plus, Tag, Wand2, type LucideIcon } from "lucide-react";
 import { useState } from "react";
 import type { User } from "@supabase/supabase-js";
 import type { MusicEvent } from "@/lib/events";
@@ -31,9 +31,11 @@ export function ProfileView({
   const [tab, setTab] = useState<Tab>("attending");
   const [selected, setSelected] = useState<MusicEvent | null>(null);
   const [editing, setEditing] = useState<MusicEvent | null>(null);
+  const [createOpen, setCreateOpen] = useState(false);
 
   const events = tab === "attending" ? attending : created;
   const name = nameOf(user);
+  const formOpen = editing !== null || createOpen;
 
   return (
     <section
@@ -104,13 +106,34 @@ export function ProfileView({
       </div>
 
       {events.length === 0 ? (
-        <div className="rounded-2xl border border-dashed border-white/10 bg-white/[0.02] px-6 py-16 text-center">
-          <p className="text-sm text-white/55">
-            {tab === "attending"
-              ? "You're not attending any events yet. Tap Attend on an event to join."
-              : "You haven't created any events yet."}
-          </p>
-        </div>
+        tab === "created" ? (
+          <div className="flex flex-col items-center rounded-2xl border border-dashed border-white/10 bg-white/[0.02] px-6 py-16 text-center">
+            <span className="flex h-14 w-14 items-center justify-center rounded-full border border-accent-400/30 bg-accent-500/10 text-accent-400 shadow-glow">
+              <CalendarPlus size={24} />
+            </span>
+            <h3 className="mt-5 text-lg font-semibold text-white">
+              No Events Created Yet
+            </h3>
+            <p className="mt-2 max-w-sm text-sm text-white/55">
+              You haven&apos;t created any events yet. Start by creating your
+              first event!
+            </p>
+            <button
+              type="button"
+              onClick={() => setCreateOpen(true)}
+              className="focus-ring mt-6 inline-flex items-center gap-1.5 rounded-full bg-accent-gradient px-4 py-2 text-sm font-semibold text-white shadow-glow transition-opacity hover:opacity-95"
+            >
+              <Plus size={14} />
+              Create Your First Event
+            </button>
+          </div>
+        ) : (
+          <div className="rounded-2xl border border-dashed border-white/10 bg-white/[0.02] px-6 py-16 text-center">
+            <p className="text-sm text-white/55">
+              You&apos;re not attending any events yet. Tap Attend on an event to join.
+            </p>
+          </div>
+        )
       ) : (
         <ul className="flex flex-col gap-4">
           {events.map((event, i) => (
@@ -149,9 +172,12 @@ export function ProfileView({
       })()}
 
       <EventFormModal
-        open={editing !== null}
+        open={formOpen}
         event={editing}
-        onClose={() => setEditing(null)}
+        onClose={() => {
+          setEditing(null);
+          setCreateOpen(false);
+        }}
       />
     </section>
   );
