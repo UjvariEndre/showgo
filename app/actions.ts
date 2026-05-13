@@ -3,7 +3,10 @@
 import { revalidatePath } from "next/cache";
 import { randomUUID } from "node:crypto";
 import { getSupabaseAdmin } from "@/lib/supabase-server";
+import { getCurrentUser } from "@/lib/supabase-user-server";
 import { eventFormSchema, type EventFormValues } from "@/models/event";
+
+const SIGN_IN_REQUIRED = "You must be signed in to do this." as const;
 
 const STORAGE_BUCKET = "event-images";
 const MAX_UPLOAD_BYTES = 5 * 1024 * 1024;
@@ -21,6 +24,8 @@ export type MutateEventResult =
 export async function createEvent(
   input: EventFormValues,
 ): Promise<MutateEventResult> {
+  if (!(await getCurrentUser())) return { ok: false, error: SIGN_IN_REQUIRED };
+
   const parsed = eventFormSchema.safeParse(input);
   if (!parsed.success) return { ok: false, ...buildValidationError(parsed.error.issues) };
 
@@ -35,6 +40,8 @@ export async function updateEvent(
   id: string,
   input: EventFormValues,
 ): Promise<MutateEventResult> {
+  if (!(await getCurrentUser())) return { ok: false, error: SIGN_IN_REQUIRED };
+
   const numericId = Number(id);
   if (!Number.isFinite(numericId)) return { ok: false, error: "Invalid event id" };
 
@@ -52,6 +59,8 @@ export async function updateEvent(
 }
 
 export async function deleteEvent(id: string): Promise<MutateEventResult> {
+  if (!(await getCurrentUser())) return { ok: false, error: SIGN_IN_REQUIRED };
+
   const numericId = Number(id);
   if (!Number.isFinite(numericId)) return { ok: false, error: "Invalid event id" };
 
@@ -76,6 +85,8 @@ export type UploadImageResult =
   | { ok: false; error: string };
 
 export async function uploadImage(formData: FormData): Promise<UploadImageResult> {
+  if (!(await getCurrentUser())) return { ok: false, error: SIGN_IN_REQUIRED };
+
   const file = formData.get("file");
   if (!(file instanceof File)) return { ok: false, error: "No file provided" };
   if (file.size === 0) return { ok: false, error: "File is empty" };

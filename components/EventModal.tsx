@@ -41,11 +41,14 @@ export function EventModal({
   event,
   onClose,
   onEdit,
+  canDelete = false,
 }: {
   event: MusicEvent | null;
   onClose: () => void;
   onEdit?: (event: MusicEvent) => void;
+  canDelete?: boolean;
 }) {
+  const showActions = canDelete || !!onEdit;
   const open = event !== null;
   const [confirming, setConfirming] = useState(false);
   const [deletePending, startDeleteTransition] = useTransition();
@@ -190,26 +193,32 @@ export function EventModal({
               </section>
             </div>
 
-            <div className="flex shrink-0 items-center gap-2 border-t border-white/5 bg-bg-card/80 px-5 py-3.5 sm:px-7">
-              <button
-                type="button"
-                onClick={() => setConfirming(true)}
-                disabled={deletePending}
-                className="focus-ring inline-flex items-center gap-1.5 rounded-lg border border-red-500/25 bg-red-500/10 px-3 py-1.5 text-sm font-medium text-red-200 transition-colors hover:border-red-500/45 hover:bg-red-500/15 disabled:opacity-50"
-              >
-                <Trash2 size={14} />
-                Delete
-              </button>
-              <button
-                type="button"
-                onClick={() => onEdit?.(event)}
-                disabled={deletePending || !onEdit}
-                className="focus-ring inline-flex items-center gap-1.5 rounded-lg border border-white/10 bg-white/[0.04] px-3 py-1.5 text-sm font-medium text-white/80 transition-colors hover:border-white/25 hover:bg-white/[0.07] hover:text-white disabled:opacity-50"
-              >
-                <Pencil size={14} />
-                Edit
-              </button>
-            </div>
+            {showActions && (
+              <div className="flex shrink-0 items-center gap-2 border-t border-white/5 bg-bg-card/80 px-5 py-3.5 sm:px-7">
+                {canDelete && (
+                  <button
+                    type="button"
+                    onClick={() => setConfirming(true)}
+                    disabled={deletePending}
+                    className="focus-ring inline-flex items-center gap-1.5 rounded-lg border border-red-500/25 bg-red-500/10 px-3 py-1.5 text-sm font-medium text-red-200 transition-colors hover:border-red-500/45 hover:bg-red-500/15 disabled:opacity-50"
+                  >
+                    <Trash2 size={14} />
+                    Delete
+                  </button>
+                )}
+                {onEdit && (
+                  <button
+                    type="button"
+                    onClick={() => onEdit(event)}
+                    disabled={deletePending}
+                    className="focus-ring inline-flex items-center gap-1.5 rounded-lg border border-white/10 bg-white/[0.04] px-3 py-1.5 text-sm font-medium text-white/80 transition-colors hover:border-white/25 hover:bg-white/[0.07] hover:text-white disabled:opacity-50"
+                  >
+                    <Pencil size={14} />
+                    Edit
+                  </button>
+                )}
+              </div>
+            )}
 
             <AnimatePresence>
               {confirming && (

@@ -3,15 +3,16 @@ import { Footer } from "@/components/Footer";
 import { Hero } from "@/components/Hero";
 import { Navbar } from "@/components/Navbar";
 import { getEvents } from "@/lib/events";
+import { getCurrentUser } from "@/lib/supabase-user-server";
 
 export default async function Page() {
-  const events = await getEvents();
+  const [events, user] = await Promise.all([getEvents(), getCurrentUser()]);
   return (
     <>
-      <Navbar />
+      <Navbar user={user} />
       <main>
         <Hero />
-        <EventList events={events} />
+        <EventList events={events} user={user} />
       </main>
       <Footer />
     </>

@@ -1,13 +1,20 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import type { User } from "@supabase/supabase-js";
 import type { MusicEvent } from "@/lib/events";
 import { EventCard } from "./EventCard";
 import { EventFilters, type GenreFilter, type SortKey } from "./EventFilters";
 import { EventFormModal } from "./EventFormModal";
 import { EventModal } from "./EventModal";
 
-export function EventList({ events }: { events: MusicEvent[] }) {
+export function EventList({
+  events,
+  user,
+}: {
+  events: MusicEvent[];
+  user: User | null;
+}) {
   const [selected, setSelected] = useState<MusicEvent | null>(null);
   const [editing, setEditing] = useState<MusicEvent | null>(null);
   const [genre, setGenre] = useState<GenreFilter>("All");
@@ -90,17 +97,24 @@ export function EventList({ events }: { events: MusicEvent[] }) {
       <EventModal
         event={selected}
         onClose={() => setSelected(null)}
-        onEdit={(event) => {
-          setSelected(null);
-          setEditing(event);
-        }}
+        onEdit={
+          user
+            ? (event) => {
+                setSelected(null);
+                setEditing(event);
+              }
+            : undefined
+        }
+        canDelete={!!user}
       />
 
-      <EventFormModal
-        open={editing !== null}
-        event={editing}
-        onClose={() => setEditing(null)}
-      />
+      {user && (
+        <EventFormModal
+          open={editing !== null}
+          event={editing}
+          onClose={() => setEditing(null)}
+        />
+      )}
     </section>
   );
 }
