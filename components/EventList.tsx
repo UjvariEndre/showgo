@@ -1,7 +1,13 @@
+"use client";
+
+import { useState } from "react";
 import type { MusicEvent } from "@/lib/events";
 import { EventCard } from "./EventCard";
+import { EventModal } from "./EventModal";
 
 export function EventList({ events }: { events: MusicEvent[] }) {
+  const [selected, setSelected] = useState<MusicEvent | null>(null);
+
   return (
     <section
       id="events"
@@ -25,10 +31,16 @@ export function EventList({ events }: { events: MusicEvent[] }) {
       <ul className="flex flex-col gap-4">
         {events.map((event, i) => (
           <li key={event.id}>
-            <EventCard event={event} index={i} />
+            <EventCard
+              event={event}
+              index={i}
+              onSelect={() => setSelected(event)}
+            />
           </li>
         ))}
       </ul>
+
+      <EventModal event={selected} onClose={() => setSelected(null)} />
     </section>
   );
 }

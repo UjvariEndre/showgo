@@ -27,9 +27,11 @@ function formatTime(time: string) {
 export function EventCard({
   event,
   index,
+  onSelect,
 }: {
   event: MusicEvent;
   index: number;
+  onSelect: () => void;
 }) {
   return (
     <motion.article
@@ -40,6 +42,15 @@ export function EventCard({
       whileHover={{ y: -3 }}
       className="group relative overflow-hidden rounded-2xl border border-white/5 bg-bg-card/70 p-4 transition-all duration-300 hover:border-accent-500/30 hover:shadow-glow sm:p-5"
     >
+      <button
+        type="button"
+        onClick={onSelect}
+        aria-label={`View details for ${event.name}`}
+        className="focus-ring absolute inset-0 z-10 rounded-2xl"
+      >
+        <span className="sr-only">View details</span>
+      </button>
+
       <div
         aria-hidden="true"
         className="pointer-events-none absolute inset-0 -z-10 opacity-0 transition-opacity duration-300 group-hover:opacity-100"

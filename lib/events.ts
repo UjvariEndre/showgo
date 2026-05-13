@@ -19,6 +19,9 @@ export interface MusicEvent {
   date: string;
   /** e.g. "21:00" */
   time: string;
+  organizer: string;
+  /** Long-form description shown in the event details modal */
+  about: string;
 }
 
 /**
@@ -40,6 +43,9 @@ export const events: MusicEvent[] = [
     category: "Rock",
     date: "2026-06-14",
     time: "20:00",
+    organizer: "Goldenvoice",
+    about:
+      "An evening of high-octane riffs and crowd-shaking choruses. Three touring bands take the stage at one of LA's most storied rooms, with a headliner set that pulls deep cuts from across a decade of records. Doors at 7, openers at 8 — get there early; the floor fills fast.",
   },
   {
     id: "jazz-night",
@@ -54,6 +60,9 @@ export const events: MusicEvent[] = [
     category: "Jazz",
     date: "2026-06-21",
     time: "21:30",
+    organizer: "Blue Note Jazz Club",
+    about:
+      "A late-night session blending bebop standards with original compositions written for the room. The five-piece quartet (yes, five — they like a second horn) trades tight arrangements for long-form improvisation as the night goes on. The kind of show where the audience leans in.",
   },
   {
     id: "electronic-party",
@@ -68,6 +77,9 @@ export const events: MusicEvent[] = [
     category: "Electronic",
     date: "2026-07-05",
     time: "23:00",
+    organizer: "Ostgut Ton",
+    about:
+      "Six DJs across three rooms, on the sound system that helped define modern techno. Expect rolling 4/4 in the main room, dub and breaks downstairs, and an ambient floor that doesn't open until 4 AM. No phones on the dancefloor — leave them in the locker, find the rhythm, stay till sunrise.",
   },
   {
     id: "indie-showcase",
@@ -82,5 +94,8 @@ export const events: MusicEvent[] = [
     category: "Indie",
     date: "2026-07-12",
     time: "19:00",
+    organizer: "Margin Walker Presents",
+    about:
+      "Four rising bands curated by Austin's sharpest tastemakers, all on one stage in one night. Lineup spans dream-pop, post-punk, and a closer that's been selling out clubs on the West Coast all summer. The kind of bill you'll claim you saw before they got big.",
   },
 ];
