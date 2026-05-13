@@ -4,18 +4,21 @@ import { AnimatePresence, motion } from "framer-motion";
 import {
   AlertTriangle,
   Calendar,
+  Check,
   Clock,
   Loader2,
   MapPin,
   Music2,
   Pencil,
+  Tag,
   Trash2,
   User,
   X,
 } from "lucide-react";
 import Image from "next/image";
+import { useRouter } from "next/navigation";
 import { useEffect, useState, useTransition } from "react";
-import { deleteEvent } from "@/app/actions";
+import { attendEvent, deleteEvent, leaveEvent } from "@/app/actions";
 import type { MusicEvent } from "@/lib/events";
 
 const dateFormatter = new Intl.DateTimeFormat("en-US", {
@@ -42,13 +45,20 @@ export function EventModal({
   onClose,
   onEdit,
   canDelete = false,
+  canAttend = false,
+  isAttending = false,
 }: {
   event: MusicEvent | null;
   onClose: () => void;
   onEdit?: (event: MusicEvent) => void;
   canDelete?: boolean;
+  canAttend?: boolean;
+  isAttending?: boolean;
 }) {
-  const showActions = canDelete || !!onEdit;
+  const showActions = canDelete || !!onEdit || canAttend;
+  const router = useRouter();
+  const [attendPending, startAttendTransition] = useTransition();
+  const [attendError, setAttendError] = useState<string | null>(null);
   const open = event !== null;
   const [confirming, setConfirming] = useState(false);
   const [deletePending, startDeleteTransition] = useTransition();
@@ -58,6 +68,7 @@ export function EventModal({
     if (!open) {
       setConfirming(false);
       setDeleteError(null);
+      setAttendError(null);
       return;
     }
     const prev = document.body.style.overflow;
@@ -87,6 +98,21 @@ export function EventModal({
         onClose();
       } else {
         setDeleteError(result.error);
+      }
+    });
+  }
+
+  function handleAttendToggle() {
+    if (!event) return;
+    setAttendError(null);
+    startAttendTransition(async () => {
+      const result = isAttending
+        ? await leaveEvent(event.id)
+        : await attendEvent(event.id);
+      if (result.ok) {
+        router.refresh();
+      } else {
+        setAttendError(result.error);
       }
     });
   }
@@ -194,12 +220,12 @@ export function EventModal({
             </div>
 
             {showActions && (
-              <div className="flex shrink-0 items-center gap-2 border-t border-white/5 bg-bg-card/80 px-5 py-3.5 sm:px-7">
+              <div className="flex shrink-0 flex-wrap items-center gap-2 border-t border-white/5 bg-bg-card/80 px-5 py-3.5 sm:px-7">
                 {canDelete && (
                   <button
                     type="button"
                     onClick={() => setConfirming(true)}
-                    disabled={deletePending}
+                    disabled={deletePending || attendPending}
                     className="focus-ring inline-flex items-center gap-1.5 rounded-lg border border-red-500/25 bg-red-500/10 px-3 py-1.5 text-sm font-medium text-red-200 transition-colors hover:border-red-500/45 hover:bg-red-500/15 disabled:opacity-50"
                   >
                     <Trash2 size={14} />
@@ -210,12 +236,46 @@ export function EventModal({
                   <button
                     type="button"
                     onClick={() => onEdit(event)}
-                    disabled={deletePending}
+                    disabled={deletePending || attendPending}
                     className="focus-ring inline-flex items-center gap-1.5 rounded-lg border border-white/10 bg-white/[0.04] px-3 py-1.5 text-sm font-medium text-white/80 transition-colors hover:border-white/25 hover:bg-white/[0.07] hover:text-white disabled:opacity-50"
                   >
                     <Pencil size={14} />
                     Edit
                   </button>
+                )}
+                {canAttend && (
+                  <div className="ml-auto flex flex-col items-end gap-1">
+                    <button
+                      type="button"
+                      onClick={handleAttendToggle}
+                      disabled={deletePending || attendPending}
+                      className={`focus-ring inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm font-semibold shadow-glow transition-opacity hover:opacity-95 disabled:cursor-wait disabled:opacity-60 ${
+                        isAttending
+                          ? "border border-accent-400/40 bg-accent-500/15 text-accent-50"
+                          : "bg-accent-gradient text-white"
+                      }`}
+                    >
+                      {attendPending ? (
+                        <Loader2 size={14} className="animate-spin" />
+                      ) : isAttending ? (
+                        <Check size={14} />
+                      ) : (
+                        <Tag size={14} />
+                      )}
+                      {attendPending
+                        ? isAttending
+                          ? "Leaving…"
+                          : "Joining…"
+                        : isAttending
+                        ? "Attending"
+                        : "Attend"}
+                    </button>
+                    {attendError && (
+                      <p role="alert" className="text-[11px] text-red-300">
+                        {attendError}
+                      </p>
+                    )}
+                  </div>
                 )}
               </div>
             )}

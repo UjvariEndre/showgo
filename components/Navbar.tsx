@@ -1,7 +1,8 @@
 "use client";
 
 import { AnimatePresence, motion } from "framer-motion";
-import { LogOut, Menu, Plus, X } from "lucide-react";
+import { LogOut, Menu, Plus, UserRound, X } from "lucide-react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import type { User } from "@supabase/supabase-js";
@@ -10,9 +11,9 @@ import { EventFormModal } from "./EventFormModal";
 import { getSupabaseBrowser } from "@/lib/supabase-browser";
 import type { AuthMode } from "@/models/auth";
 
-const links = [
-  { href: "#home", label: "Home" },
-  { href: "#events", label: "Events" },
+const NAV_LINKS = [
+  { href: "/#home", label: "Home" },
+  { href: "/#events", label: "Events" },
 ];
 
 function initialsOf(user: User) {
@@ -87,7 +88,7 @@ export function Navbar({ user }: { user: User | null }) {
             </a>
 
             <ul className="hidden items-center gap-1 md:flex">
-              {links.map((l) => (
+              {NAV_LINKS.map((l) => (
                 <li key={l.href}>
                   <a
                     href={l.href}
@@ -142,11 +143,20 @@ export function Navbar({ user }: { user: User | null }) {
                             {user.email}
                           </p>
                         </div>
+                        <Link
+                          href="/profile"
+                          onClick={() => setUserMenuOpen(false)}
+                          role="menuitem"
+                          className="focus-ring flex w-full items-center gap-2 px-4 py-2.5 text-sm text-white/75 transition-colors hover:bg-white/5 hover:text-white"
+                        >
+                          <UserRound size={14} />
+                          Profile
+                        </Link>
                         <button
                           type="button"
                           onClick={handleSignOut}
                           role="menuitem"
-                          className="focus-ring flex w-full items-center gap-2 px-4 py-2.5 text-left text-sm text-white/75 transition-colors hover:bg-white/5 hover:text-white"
+                          className="focus-ring flex w-full items-center gap-2 border-t border-white/5 px-4 py-2.5 text-left text-sm text-white/75 transition-colors hover:bg-white/5 hover:text-white"
                         >
                           <LogOut size={14} />
                           Sign out
@@ -200,7 +210,7 @@ export function Navbar({ user }: { user: User | null }) {
             className="glass border-b border-white/5 md:hidden"
           >
             <ul className="mx-auto flex max-w-6xl flex-col gap-1 px-6 py-4">
-              {links.map((l) => (
+              {NAV_LINKS.map((l) => (
                 <li key={l.href}>
                   <a
                     href={l.href}
@@ -231,6 +241,14 @@ export function Navbar({ user }: { user: User | null }) {
                     <p className="truncate px-3 pb-2 pt-0.5 text-sm text-white">
                       {user.email}
                     </p>
+                    <Link
+                      href="/profile"
+                      onClick={() => setOpen(false)}
+                      className="focus-ring flex w-full items-center gap-2 rounded-md px-3 py-2.5 text-sm text-white/75 transition-colors hover:bg-white/5 hover:text-white"
+                    >
+                      <UserRound size={14} />
+                      Profile
+                    </Link>
                     <button
                       type="button"
                       onClick={handleSignOut}

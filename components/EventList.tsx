@@ -11,9 +11,11 @@ import { EventModal } from "./EventModal";
 export function EventList({
   events,
   user,
+  attendingIds,
 }: {
   events: MusicEvent[];
   user: User | null;
+  attendingIds: Set<string>;
 }) {
   const [selected, setSelected] = useState<MusicEvent | null>(null);
   const [editing, setEditing] = useState<MusicEvent | null>(null);
@@ -88,25 +90,34 @@ export function EventList({
                 event={event}
                 index={i}
                 onSelect={() => setSelected(event)}
+                isOwner={!!user && event.createdBy === user.id}
+                isAttending={attendingIds.has(event.id)}
               />
             </li>
           ))}
         </ul>
       )}
 
-      <EventModal
-        event={selected}
-        onClose={() => setSelected(null)}
-        onEdit={
-          user
-            ? (event) => {
-                setSelected(null);
-                setEditing(event);
-              }
-            : undefined
-        }
-        canDelete={!!user}
-      />
+      {(() => {
+        const isSelectedOwner = !!(user && selected && selected.createdBy === user.id);
+        return (
+          <EventModal
+            event={selected}
+            onClose={() => setSelected(null)}
+            onEdit={
+              isSelectedOwner
+                ? (event) => {
+                    setSelected(null);
+                    setEditing(event);
+                  }
+                : undefined
+            }
+            canDelete={isSelectedOwner}
+            canAttend={!!user}
+            isAttending={selected ? attendingIds.has(selected.id) : false}
+          />
+        );
+      })()}
 
       {user && (
         <EventFormModal

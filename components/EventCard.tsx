@@ -1,7 +1,7 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { Calendar, Clock, MapPin, Music2, Tag } from "lucide-react";
+import { Calendar, Clock, MapPin, Music2, Tag, Wand2 } from "lucide-react";
 import Image from "next/image";
 import type { MusicEvent } from "@/lib/events";
 
@@ -28,10 +28,14 @@ export function EventCard({
   event,
   index,
   onSelect,
+  isOwner = false,
+  isAttending = false,
 }: {
   event: MusicEvent;
   index: number;
   onSelect: () => void;
+  isOwner?: boolean;
+  isAttending?: boolean;
 }) {
   return (
     <motion.article
@@ -107,6 +111,22 @@ export function EventCard({
           </div>
         </div>
       </div>
+
+      {(isOwner || isAttending) && (
+        <div className="pointer-events-none absolute bottom-3 right-3 z-[5]">
+          {isOwner ? (
+            <span className="inline-flex items-center gap-1 rounded-full bg-accent-gradient px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-white shadow-glow">
+              <Wand2 size={10} />
+              Created
+            </span>
+          ) : (
+            <span className="inline-flex items-center gap-1 rounded-full border border-accent-400/40 bg-accent-500/15 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-accent-50">
+              <Tag size={10} />
+              Attending
+            </span>
+          )}
+        </div>
+      )}
     </motion.article>
   );
 }

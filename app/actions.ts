@@ -7,6 +7,22 @@ import { getCurrentUser } from "@/lib/supabase-user-server";
 import { eventFormSchema, type EventFormValues } from "@/models/event";
 
 const SIGN_IN_REQUIRED = "You must be signed in to do this." as const;
+const NOT_OWNER = "You can only modify events you created." as const;
+
+async function assertOwnership(
+  eventId: number,
+  userId: string,
+): Promise<MutateEventResult | null> {
+  const { data, error } = await getSupabaseAdmin()
+    .from("events")
+    .select("created_by")
+    .eq("id", eventId)
+    .maybeSingle();
+  if (error) return { ok: false, error: error.message };
+  if (!data) return { ok: false, error: "Event not found" };
+  if (data.created_by !== userId) return { ok: false, error: NOT_OWNER };
+  return null;
+}
 
 const STORAGE_BUCKET = "event-images";
 const MAX_UPLOAD_BYTES = 5 * 1024 * 1024;
@@ -24,15 +40,19 @@ export type MutateEventResult =
 export async function createEvent(
   input: EventFormValues,
 ): Promise<MutateEventResult> {
-  if (!(await getCurrentUser())) return { ok: false, error: SIGN_IN_REQUIRED };
+  const user = await getCurrentUser();
+  if (!user) return { ok: false, error: SIGN_IN_REQUIRED };
 
   const parsed = eventFormSchema.safeParse(input);
   if (!parsed.success) return { ok: false, ...buildValidationError(parsed.error.issues) };
 
-  const { error } = await getSupabaseAdmin().from("events").insert(parsed.data);
+  const { error } = await getSupabaseAdmin()
+    .from("events")
+    .insert({ ...parsed.data, created_by: user.id });
   if (error) return { ok: false, error: error.message };
 
   revalidatePath("/");
+  revalidatePath("/profile");
   return { ok: true };
 }
 
@@ -40,10 +60,14 @@ export async function updateEvent(
   id: string,
   input: EventFormValues,
 ): Promise<MutateEventResult> {
-  if (!(await getCurrentUser())) return { ok: false, error: SIGN_IN_REQUIRED };
+  const user = await getCurrentUser();
+  if (!user) return { ok: false, error: SIGN_IN_REQUIRED };
 
   const numericId = Number(id);
   if (!Number.isFinite(numericId)) return { ok: false, error: "Invalid event id" };
+
+  const ownershipError = await assertOwnership(numericId, user.id);
+  if (ownershipError) return ownershipError;
 
   const parsed = eventFormSchema.safeParse(input);
   if (!parsed.success) return { ok: false, ...buildValidationError(parsed.error.issues) };
@@ -55,19 +79,61 @@ export async function updateEvent(
   if (error) return { ok: false, error: error.message };
 
   revalidatePath("/");
+  revalidatePath("/profile");
   return { ok: true };
 }
 
 export async function deleteEvent(id: string): Promise<MutateEventResult> {
-  if (!(await getCurrentUser())) return { ok: false, error: SIGN_IN_REQUIRED };
+  const user = await getCurrentUser();
+  if (!user) return { ok: false, error: SIGN_IN_REQUIRED };
 
   const numericId = Number(id);
   if (!Number.isFinite(numericId)) return { ok: false, error: "Invalid event id" };
+
+  const ownershipError = await assertOwnership(numericId, user.id);
+  if (ownershipError) return ownershipError;
 
   const { error } = await getSupabaseAdmin().from("events").delete().eq("id", numericId);
   if (error) return { ok: false, error: error.message };
 
   revalidatePath("/");
+  revalidatePath("/profile");
+  return { ok: true };
+}
+
+export async function attendEvent(eventId: string): Promise<MutateEventResult> {
+  const user = await getCurrentUser();
+  if (!user) return { ok: false, error: SIGN_IN_REQUIRED };
+
+  const numericId = Number(eventId);
+  if (!Number.isFinite(numericId)) return { ok: false, error: "Invalid event id" };
+
+  const { error } = await getSupabaseAdmin()
+    .from("event_attendees")
+    .upsert({ event_id: numericId, user_id: user.id }, { onConflict: "event_id,user_id" });
+  if (error) return { ok: false, error: error.message };
+
+  revalidatePath("/");
+  revalidatePath("/profile");
+  return { ok: true };
+}
+
+export async function leaveEvent(eventId: string): Promise<MutateEventResult> {
+  const user = await getCurrentUser();
+  if (!user) return { ok: false, error: SIGN_IN_REQUIRED };
+
+  const numericId = Number(eventId);
+  if (!Number.isFinite(numericId)) return { ok: false, error: "Invalid event id" };
+
+  const { error } = await getSupabaseAdmin()
+    .from("event_attendees")
+    .delete()
+    .eq("event_id", numericId)
+    .eq("user_id", user.id);
+  if (error) return { ok: false, error: error.message };
+
+  revalidatePath("/");
+  revalidatePath("/profile");
   return { ok: true };
 }
 

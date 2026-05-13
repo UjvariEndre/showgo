@@ -68,5 +68,6 @@ export const eventRowSchema = z.object({
   time: z.string(),
   organizer: z.string(),
   about: z.string(),
+  created_by: z.string().uuid().nullable().optional(),
 });
 export type EventRow = z.infer<typeof eventRowSchema>;
