@@ -1,4 +1,5 @@
 import { createClient } from "@supabase/supabase-js";
+import { eventRowSchema, type EventRow } from "@/models/event";
 
 export type EventCategory =
   | "Rock"
@@ -23,20 +24,6 @@ export interface MusicEvent {
   time: string;
   organizer: string;
   /** Long-form description shown in the event details modal */
-  about: string;
-}
-
-interface EventRow {
-  id: number;
-  title: string;
-  description: string;
-  image_url: string;
-  location: string;
-  venue: string;
-  genre: string;
-  date: string;
-  time: string;
-  organizer: string;
   about: string;
 }
 
@@ -71,5 +58,15 @@ export async function getEvents(): Promise<MusicEvent[]> {
     .order("date", { ascending: true });
 
   if (error) throw error;
-  return (data ?? []).map(mapRow);
+
+  const events: MusicEvent[] = [];
+  for (const raw of data ?? []) {
+    const parsed = eventRowSchema.safeParse(raw);
+    if (parsed.success) {
+      events.push(mapRow(parsed.data));
+    } else {
+      console.warn("[getEvents] dropping malformed row", parsed.error.issues, raw);
+    }
+  }
+  return events;
 }
