@@ -20,8 +20,9 @@ import {
   useTransition,
 } from "react";
 import { Controller, useForm, type FieldError } from "react-hook-form";
-import { createEvent, uploadImage } from "@/app/actions";
+import { createEvent, updateEvent, uploadImage } from "@/app/actions";
 import { EVENT_IMAGES } from "@/lib/event-images";
+import type { MusicEvent } from "@/lib/events";
 import {
   EVENT_GENRES,
   eventFormSchema,
@@ -30,16 +31,48 @@ import {
 
 const ACCEPTED_MIMES = "image/jpeg,image/png,image/webp";
 
+const EMPTY_VALUES: EventFormValues = {
+  title: "",
+  description: "",
+  genre: undefined as unknown as EventFormValues["genre"],
+  date: "",
+  time: "",
+  location: "",
+  venue: "",
+  organizer: "",
+  about: "",
+  image_url: "",
+};
+
+function eventToValues(event: MusicEvent): EventFormValues {
+  return {
+    title: event.name,
+    description: event.description,
+    genre: event.category,
+    date: event.date,
+    time: event.time.slice(0, 5),
+    location: event.city,
+    venue: event.venue,
+    organizer: event.organizer,
+    about: event.about,
+    image_url: event.image,
+  };
+}
+
 const inputClasses =
   "focus-ring w-full rounded-lg border border-white/10 bg-white/[0.03] px-3 py-2 text-sm text-white placeholder:text-white/30 transition-colors hover:border-white/20 focus:border-accent-400/50 aria-[invalid=true]:border-red-500/60";
 
-export function CreateEventModal({
+export function EventFormModal({
   open,
   onClose,
+  event,
 }: {
   open: boolean;
   onClose: () => void;
+  /** When present, the form is in edit mode and submits an update for this event. */
+  event?: MusicEvent | null;
 }) {
+  const isEdit = !!event;
   const [pending, startTransition] = useTransition();
   const [submitError, setSubmitError] = useState<string | null>(null);
 
@@ -54,18 +87,7 @@ export function CreateEventModal({
     resolver: zodResolver(eventFormSchema),
     mode: "onTouched",
     reValidateMode: "onChange",
-    defaultValues: {
-      title: "",
-      description: "",
-      genre: undefined as unknown as EventFormValues["genre"],
-      date: "",
-      time: "",
-      location: "",
-      venue: "",
-      organizer: "",
-      about: "",
-      image_url: "",
-    },
+    defaultValues: EMPTY_VALUES,
   });
 
   useEffect(() => {
@@ -83,16 +105,20 @@ export function CreateEventModal({
   }, [open, onClose, pending]);
 
   useEffect(() => {
-    if (!open) {
-      reset();
+    if (open) {
+      reset(event ? eventToValues(event) : EMPTY_VALUES);
+      setSubmitError(null);
+    } else {
       setSubmitError(null);
     }
-  }, [open, reset]);
+  }, [open, event, reset]);
 
   const onSubmit = handleSubmit((values) => {
     setSubmitError(null);
     startTransition(async () => {
-      const result = await createEvent(values);
+      const result = event
+        ? await updateEvent(event.id, values)
+        : await createEvent(values);
       if (result.ok) {
         onClose();
         return;
@@ -112,11 +138,11 @@ export function CreateEventModal({
     <AnimatePresence>
       {open && (
         <motion.div
-          key="create-event-modal"
+          key="event-form-modal"
           className="fixed inset-0 z-[100] flex items-center justify-center p-4 sm:p-6"
           role="dialog"
           aria-modal="true"
-          aria-labelledby="create-event-title"
+          aria-labelledby="event-form-title"
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
@@ -124,7 +150,7 @@ export function CreateEventModal({
         >
           <button
             type="button"
-            aria-label="Close create event form"
+            aria-label="Close form"
             onClick={() => !busy && onClose()}
             className="absolute inset-0 cursor-default bg-black/70 backdrop-blur-md"
           />
@@ -139,20 +165,20 @@ export function CreateEventModal({
             <div className="flex items-center justify-between border-b border-white/5 px-5 py-4 sm:px-7">
               <div>
                 <p className="text-[11px] font-medium uppercase tracking-[0.2em] text-accent-400/80">
-                  New event
+                  {isEdit ? "Edit event" : "New event"}
                 </p>
                 <h2
-                  id="create-event-title"
+                  id="event-form-title"
                   className="mt-1 text-xl font-semibold tracking-tight text-white sm:text-2xl"
                 >
-                  Create an event
+                  {isEdit ? "Edit event details" : "Create an event"}
                 </h2>
               </div>
               <button
                 type="button"
                 onClick={onClose}
                 disabled={busy}
-                aria-label="Close create event form"
+                aria-label="Close form"
                 className="focus-ring flex h-9 w-9 items-center justify-center rounded-full border border-white/10 bg-black/40 text-white/80 transition-colors hover:bg-black/70 hover:text-white disabled:opacity-50"
               >
                 <X size={16} />
@@ -271,7 +297,13 @@ export function CreateEventModal({
                   className="focus-ring inline-flex items-center gap-2 rounded-lg bg-accent-gradient px-4 py-2 text-sm font-medium text-white shadow-glow transition-opacity hover:opacity-95 disabled:cursor-not-allowed disabled:opacity-60"
                 >
                   {busy && <Loader2 size={14} className="animate-spin" />}
-                  {busy ? "Creating…" : "Create Event"}
+                  {busy
+                    ? isEdit
+                      ? "Saving…"
+                      : "Creating…"
+                    : isEdit
+                    ? "Save changes"
+                    : "Create Event"}
                 </button>
               </div>
             </form>

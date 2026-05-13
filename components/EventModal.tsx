@@ -1,9 +1,21 @@
 "use client";
 
 import { AnimatePresence, motion } from "framer-motion";
-import { Calendar, Clock, MapPin, Music2, User, X } from "lucide-react";
+import {
+  AlertTriangle,
+  Calendar,
+  Clock,
+  Loader2,
+  MapPin,
+  Music2,
+  Pencil,
+  Trash2,
+  User,
+  X,
+} from "lucide-react";
 import Image from "next/image";
-import { useEffect } from "react";
+import { useEffect, useState, useTransition } from "react";
+import { deleteEvent } from "@/app/actions";
 import type { MusicEvent } from "@/lib/events";
 
 const dateFormatter = new Intl.DateTimeFormat("en-US", {
@@ -28,25 +40,53 @@ function formatTime(time: string) {
 export function EventModal({
   event,
   onClose,
+  onEdit,
 }: {
   event: MusicEvent | null;
   onClose: () => void;
+  onEdit?: (event: MusicEvent) => void;
 }) {
   const open = event !== null;
+  const [confirming, setConfirming] = useState(false);
+  const [deletePending, startDeleteTransition] = useTransition();
+  const [deleteError, setDeleteError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!open) return;
+    if (!open) {
+      setConfirming(false);
+      setDeleteError(null);
+      return;
+    }
     const prev = document.body.style.overflow;
     document.body.style.overflow = "hidden";
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") onClose();
+      if (e.key !== "Escape") return;
+      if (confirming && !deletePending) {
+        setConfirming(false);
+      } else if (!deletePending) {
+        onClose();
+      }
     };
     window.addEventListener("keydown", onKey);
     return () => {
       document.body.style.overflow = prev;
       window.removeEventListener("keydown", onKey);
     };
-  }, [open, onClose]);
+  }, [open, onClose, confirming, deletePending]);
+
+  function handleDelete() {
+    if (!event) return;
+    setDeleteError(null);
+    startDeleteTransition(async () => {
+      const result = await deleteEvent(event.id);
+      if (result.ok) {
+        setConfirming(false);
+        onClose();
+      } else {
+        setDeleteError(result.error);
+      }
+    });
+  }
 
   return (
     <AnimatePresence>
@@ -65,7 +105,7 @@ export function EventModal({
           <button
             type="button"
             aria-label="Close event details"
-            onClick={onClose}
+            onClick={() => !deletePending && onClose()}
             className="absolute inset-0 cursor-default bg-black/70 backdrop-blur-md"
           />
 
@@ -74,9 +114,9 @@ export function EventModal({
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 18, scale: 0.97 }}
             transition={{ duration: 0.24, ease: [0.16, 1, 0.3, 1] }}
-            className="relative z-10 w-full max-w-2xl overflow-hidden rounded-2xl border border-white/10 bg-bg-card shadow-glow-lg"
+            className="relative z-10 flex max-h-[90vh] w-full max-w-2xl flex-col overflow-hidden rounded-2xl border border-white/10 bg-bg-card shadow-glow-lg"
           >
-            <div className="relative h-56 w-full overflow-hidden sm:h-64">
+            <div className="relative h-56 w-full shrink-0 overflow-hidden sm:h-64">
               <Image
                 src={event.image}
                 alt={event.imageAlt}
@@ -96,8 +136,9 @@ export function EventModal({
               <button
                 type="button"
                 onClick={onClose}
+                disabled={deletePending}
                 aria-label="Close event details"
-                className="focus-ring absolute right-3 top-3 flex h-9 w-9 items-center justify-center rounded-full border border-white/10 bg-black/55 text-white/80 backdrop-blur-md transition-colors hover:bg-black/80 hover:text-white"
+                className="focus-ring absolute right-3 top-3 flex h-9 w-9 items-center justify-center rounded-full border border-white/10 bg-black/55 text-white/80 backdrop-blur-md transition-colors hover:bg-black/80 hover:text-white disabled:opacity-50"
               >
                 <X size={16} />
               </button>
@@ -108,7 +149,7 @@ export function EventModal({
               </span>
             </div>
 
-            <div className="max-h-[calc(90vh-14rem)] overflow-y-auto px-5 pb-6 pt-5 sm:max-h-[calc(90vh-16rem)] sm:px-7 sm:pb-7">
+            <div className="flex-1 overflow-y-auto px-5 pb-6 pt-5 sm:px-7 sm:pb-7">
               <h2
                 id="event-modal-title"
                 className="text-2xl font-semibold tracking-tight text-white sm:text-3xl"
@@ -148,6 +189,100 @@ export function EventModal({
                 </p>
               </section>
             </div>
+
+            <div className="flex shrink-0 items-center gap-2 border-t border-white/5 bg-bg-card/80 px-5 py-3.5 sm:px-7">
+              <button
+                type="button"
+                onClick={() => setConfirming(true)}
+                disabled={deletePending}
+                className="focus-ring inline-flex items-center gap-1.5 rounded-lg border border-red-500/25 bg-red-500/10 px-3 py-1.5 text-sm font-medium text-red-200 transition-colors hover:border-red-500/45 hover:bg-red-500/15 disabled:opacity-50"
+              >
+                <Trash2 size={14} />
+                Delete
+              </button>
+              <button
+                type="button"
+                onClick={() => onEdit?.(event)}
+                disabled={deletePending || !onEdit}
+                className="focus-ring inline-flex items-center gap-1.5 rounded-lg border border-white/10 bg-white/[0.04] px-3 py-1.5 text-sm font-medium text-white/80 transition-colors hover:border-white/25 hover:bg-white/[0.07] hover:text-white disabled:opacity-50"
+              >
+                <Pencil size={14} />
+                Edit
+              </button>
+            </div>
+
+            <AnimatePresence>
+              {confirming && (
+                <motion.div
+                  key="confirm-delete"
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                  transition={{ duration: 0.18 }}
+                  className="absolute inset-0 z-20 flex items-center justify-center bg-black/65 backdrop-blur-md"
+                  role="alertdialog"
+                  aria-modal="true"
+                  aria-labelledby="confirm-delete-title"
+                >
+                  <motion.div
+                    initial={{ y: 10, scale: 0.96, opacity: 0 }}
+                    animate={{ y: 0, scale: 1, opacity: 1 }}
+                    exit={{ y: 10, scale: 0.96, opacity: 0 }}
+                    transition={{ duration: 0.2, ease: [0.16, 1, 0.3, 1] }}
+                    className="mx-6 w-full max-w-sm rounded-xl border border-white/10 bg-bg-card p-5 shadow-glow-lg"
+                  >
+                    <div className="flex items-start gap-3">
+                      <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-red-500/30 bg-red-500/10 text-red-300">
+                        <AlertTriangle size={16} />
+                      </span>
+                      <div className="min-w-0">
+                        <h3
+                          id="confirm-delete-title"
+                          className="text-base font-semibold text-white"
+                        >
+                          Delete this event?
+                        </h3>
+                        <p className="mt-1 text-sm text-white/60">
+                          &ldquo;{event.name}&rdquo; will be permanently
+                          removed. This cannot be undone.
+                        </p>
+                      </div>
+                    </div>
+
+                    {deleteError && (
+                      <p
+                        role="alert"
+                        className="mt-3 rounded-md border border-red-500/30 bg-red-500/10 px-3 py-2 text-xs text-red-200"
+                      >
+                        {deleteError}
+                      </p>
+                    )}
+
+                    <div className="mt-5 flex items-center justify-end gap-2">
+                      <button
+                        type="button"
+                        onClick={() => setConfirming(false)}
+                        disabled={deletePending}
+                        className="focus-ring rounded-lg px-3 py-1.5 text-sm text-white/70 transition-colors hover:bg-white/5 hover:text-white disabled:opacity-50"
+                      >
+                        Cancel
+                      </button>
+                      <button
+                        type="button"
+                        onClick={handleDelete}
+                        disabled={deletePending}
+                        className="focus-ring inline-flex items-center gap-1.5 rounded-lg bg-red-500/90 px-3 py-1.5 text-sm font-medium text-white shadow-glow transition-opacity hover:bg-red-500 disabled:cursor-wait disabled:opacity-70"
+                      >
+                        {deletePending && (
+                          <Loader2 size={13} className="animate-spin" />
+                        )}
+                        {deletePending ? "Deleting…" : "Delete"}
+                      </button>
+                    </div>
+                  </motion.div>
+                </motion.div>
+              )}
+            </AnimatePresence>
           </motion.div>
         </motion.div>
       )}

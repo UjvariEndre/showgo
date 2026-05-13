@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { Menu, Plus, X } from "lucide-react";
-import { CreateEventModal } from "./CreateEventModal";
+import { EventFormModal } from "./EventFormModal";
 
 const links = [
   { href: "#home", label: "Home" },
@@ -117,7 +117,7 @@ export function Navbar() {
         )}
       </AnimatePresence>
 
-      <CreateEventModal
+      <EventFormModal
         open={createOpen}
         onClose={() => setCreateOpen(false)}
       />

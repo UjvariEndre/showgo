@@ -4,10 +4,12 @@ import { useMemo, useState } from "react";
 import type { MusicEvent } from "@/lib/events";
 import { EventCard } from "./EventCard";
 import { EventFilters, type GenreFilter, type SortKey } from "./EventFilters";
+import { EventFormModal } from "./EventFormModal";
 import { EventModal } from "./EventModal";
 
 export function EventList({ events }: { events: MusicEvent[] }) {
   const [selected, setSelected] = useState<MusicEvent | null>(null);
+  const [editing, setEditing] = useState<MusicEvent | null>(null);
   const [genre, setGenre] = useState<GenreFilter>("All");
   const [sort, setSort] = useState<SortKey>("date-asc");
 
@@ -85,7 +87,20 @@ export function EventList({ events }: { events: MusicEvent[] }) {
         </ul>
       )}
 
-      <EventModal event={selected} onClose={() => setSelected(null)} />
+      <EventModal
+        event={selected}
+        onClose={() => setSelected(null)}
+        onEdit={(event) => {
+          setSelected(null);
+          setEditing(event);
+        }}
+      />
+
+      <EventFormModal
+        open={editing !== null}
+        event={editing}
+        onClose={() => setEditing(null)}
+      />
     </section>
   );
 }

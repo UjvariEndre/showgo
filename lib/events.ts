@@ -1,5 +1,5 @@
-import { createClient } from "@supabase/supabase-js";
 import { eventRowSchema, type EventRow } from "@/models/event";
+import { getSupabasePublic } from "./supabase-server";
 
 export type EventCategory =
   | "Rock"
@@ -27,11 +27,6 @@ export interface MusicEvent {
   about: string;
 }
 
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY!,
-);
-
 function mapRow(row: EventRow): MusicEvent {
   return {
     id: String(row.id),
@@ -50,7 +45,7 @@ function mapRow(row: EventRow): MusicEvent {
 }
 
 export async function getEvents(): Promise<MusicEvent[]> {
-  const { data, error } = await supabase
+  const { data, error } = await getSupabasePublic()
     .from("events")
     .select(
       "id, title, description, image_url, location, venue, genre, date, time, organizer, about",
