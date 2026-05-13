@@ -5,6 +5,7 @@ import { Tag, Wand2, type LucideIcon } from "lucide-react";
 import { useState } from "react";
 import type { User } from "@supabase/supabase-js";
 import type { MusicEvent } from "@/lib/events";
+import { initialsOf, nameOf } from "@/lib/user";
 import { EventCard } from "./EventCard";
 import { EventFormModal } from "./EventFormModal";
 import { EventModal } from "./EventModal";
@@ -32,7 +33,7 @@ export function ProfileView({
   const [editing, setEditing] = useState<MusicEvent | null>(null);
 
   const events = tab === "attending" ? attending : created;
-  const initials = (user.email ?? "?").slice(0, 2).toUpperCase();
+  const name = nameOf(user);
 
   return (
     <section
@@ -41,15 +42,24 @@ export function ProfileView({
     >
       <header className="mb-8 flex items-center gap-4">
         <span className="flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-accent-gradient text-base font-semibold tracking-wider text-white shadow-glow">
-          {initials}
+          {initialsOf(user)}
         </span>
         <div className="min-w-0">
           <p className="text-xs uppercase tracking-[0.2em] text-accent-400/80">
             Your profile
           </p>
-          <h1 className="mt-1 truncate text-2xl font-semibold tracking-tight text-white sm:text-3xl">
+          {name && (
+            <h1 className="mt-1 truncate text-2xl font-semibold tracking-tight text-white sm:text-3xl">
+              {name}
+            </h1>
+          )}
+          <p
+            className={`truncate ${
+              name ? "mt-1 text-sm text-white/55" : "mt-1 text-2xl font-semibold tracking-tight text-white sm:text-3xl"
+            }`}
+          >
             {user.email}
-          </h1>
+          </p>
         </div>
       </header>
 

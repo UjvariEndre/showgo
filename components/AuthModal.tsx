@@ -2,13 +2,21 @@
 
 import { zodResolver } from "@hookform/resolvers/zod";
 import { AnimatePresence, motion } from "framer-motion";
-import { Loader2, Lock, Mail, X } from "lucide-react";
+import { Loader2, Lock, Mail, UserRound, X } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { forwardRef, useEffect, useId, useState, useTransition } from "react";
-import { useForm, type FieldError } from "react-hook-form";
+import {
+  forwardRef,
+  useEffect,
+  useId,
+  useMemo,
+  useState,
+  useTransition,
+} from "react";
+import { useForm, type FieldError, type Resolver } from "react-hook-form";
 import { getSupabaseBrowser } from "@/lib/supabase-browser";
 import {
-  authFormSchema,
+  signinSchema,
+  signupSchema,
   type AuthFormValues,
   type AuthMode,
 } from "@/models/auth";
@@ -51,16 +59,24 @@ export function AuthModal({
   const [error, setError] = useState<string | null>(null);
   const copy = COPY[mode];
 
+  const resolver = useMemo<Resolver<AuthFormValues>>(
+    () =>
+      zodResolver(
+        mode === "signup" ? signupSchema : signinSchema,
+      ) as unknown as Resolver<AuthFormValues>,
+    [mode],
+  );
+
   const {
     register,
     handleSubmit,
     reset,
     formState: { errors, isValid },
   } = useForm<AuthFormValues>({
-    resolver: zodResolver(authFormSchema),
+    resolver,
     mode: "onTouched",
     reValidateMode: "onChange",
-    defaultValues: { email: "", password: "" },
+    defaultValues: { name: "", email: "", password: "" },
   });
 
   useEffect(() => {
@@ -95,13 +111,20 @@ export function AuthModal({
       const supabase = getSupabaseBrowser();
 
       if (mode === "signin") {
-        const { error: authError } = await supabase.auth.signInWithPassword(values);
+        const { error: authError } = await supabase.auth.signInWithPassword({
+          email: values.email,
+          password: values.password,
+        });
         if (authError) {
           setError(authError.message);
           return;
         }
       } else {
-        const { data, error: signUpError } = await supabase.auth.signUp(values);
+        const { data, error: signUpError } = await supabase.auth.signUp({
+          email: values.email,
+          password: values.password,
+          options: { data: { name: values.name } },
+        });
         if (signUpError) {
           setError(signUpError.message);
           return;
@@ -111,7 +134,10 @@ export function AuthModal({
         // session comes back, the password sign-in below will succeed.
         if (!data.session) {
           const { error: signInError } =
-            await supabase.auth.signInWithPassword(values);
+            await supabase.auth.signInWithPassword({
+              email: values.email,
+              password: values.password,
+            });
           if (signInError) {
             setError(signInError.message);
             return;
@@ -177,6 +203,17 @@ export function AuthModal({
 
             <form onSubmit={onSubmit} noValidate className="px-6 py-6">
               <div className="space-y-4">
+                {mode === "signup" && (
+                  <AuthField
+                    label="Name"
+                    icon={<UserRound size={14} />}
+                    type="text"
+                    autoComplete="name"
+                    placeholder="Your full name"
+                    error={errors.name}
+                    {...register("name")}
+                  />
+                )}
                 <AuthField
                   label="Email"
                   icon={<Mail size={14} />}

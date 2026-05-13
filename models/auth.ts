@@ -1,6 +1,11 @@
 import { z } from "zod";
 
-export const authFormSchema = z.object({
+export const signupSchema = z.object({
+  name: z
+    .string()
+    .trim()
+    .min(2, "Name must be at least 2 characters")
+    .max(80, "Name must be 80 characters or fewer"),
   email: z.string().trim().email("Enter a valid email"),
   password: z
     .string()
@@ -8,6 +13,9 @@ export const authFormSchema = z.object({
     .max(72, "Password is too long"),
 });
 
-export type AuthFormValues = z.infer<typeof authFormSchema>;
+export const signinSchema = signupSchema.omit({ name: true });
+
+/** Superset shape used by the form regardless of mode. */
+export type AuthFormValues = z.infer<typeof signupSchema>;
 
 export type AuthMode = "signin" | "signup";

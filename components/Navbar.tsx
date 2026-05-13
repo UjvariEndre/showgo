@@ -9,17 +9,15 @@ import type { User } from "@supabase/supabase-js";
 import { AuthModal } from "./AuthModal";
 import { EventFormModal } from "./EventFormModal";
 import { getSupabaseBrowser } from "@/lib/supabase-browser";
+import { initialsOf, nameOf } from "@/lib/user";
 import type { AuthMode } from "@/models/auth";
 
-const NAV_LINKS = [
+const PUBLIC_LINKS = [
   { href: "/#home", label: "Home" },
   { href: "/#events", label: "Events" },
 ];
 
-function initialsOf(user: User) {
-  const name = user.email ?? "?";
-  return name.slice(0, 2).toUpperCase();
-}
+const PROFILE_LINK = { href: "/profile", label: "Profile" };
 
 export function Navbar({ user }: { user: User | null }) {
   const router = useRouter();
@@ -28,6 +26,8 @@ export function Navbar({ user }: { user: User | null }) {
   const [authMode, setAuthMode] = useState<AuthMode | null>(null);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
   const userMenuRef = useRef<HTMLDivElement>(null);
+
+  const navLinks = user ? [...PUBLIC_LINKS, PROFILE_LINK] : PUBLIC_LINKS;
 
   useEffect(() => {
     if (!open) return;
@@ -88,7 +88,7 @@ export function Navbar({ user }: { user: User | null }) {
             </a>
 
             <ul className="hidden items-center gap-1 md:flex">
-              {NAV_LINKS.map((l) => (
+              {navLinks.map((l) => (
                 <li key={l.href}>
                   <a
                     href={l.href}
@@ -139,7 +139,12 @@ export function Navbar({ user }: { user: User | null }) {
                           <p className="text-[10px] uppercase tracking-[0.18em] text-white/40">
                             Signed in as
                           </p>
-                          <p className="mt-0.5 truncate text-sm text-white">
+                          {nameOf(user) && (
+                            <p className="mt-0.5 truncate text-sm font-semibold text-white">
+                              {nameOf(user)}
+                            </p>
+                          )}
+                          <p className="mt-0.5 truncate text-xs text-white/55">
                             {user.email}
                           </p>
                         </div>
@@ -210,7 +215,7 @@ export function Navbar({ user }: { user: User | null }) {
             className="glass border-b border-white/5 md:hidden"
           >
             <ul className="mx-auto flex max-w-6xl flex-col gap-1 px-6 py-4">
-              {NAV_LINKS.map((l) => (
+              {navLinks.map((l) => (
                 <li key={l.href}>
                   <a
                     href={l.href}
@@ -238,7 +243,12 @@ export function Navbar({ user }: { user: User | null }) {
                     <p className="px-3 text-[10px] uppercase tracking-[0.18em] text-white/40">
                       Signed in as
                     </p>
-                    <p className="truncate px-3 pb-2 pt-0.5 text-sm text-white">
+                    {nameOf(user) && (
+                      <p className="truncate px-3 pt-0.5 text-sm font-semibold text-white">
+                        {nameOf(user)}
+                      </p>
+                    )}
+                    <p className="truncate px-3 pb-2 pt-0.5 text-xs text-white/55">
                       {user.email}
                     </p>
                     <Link
