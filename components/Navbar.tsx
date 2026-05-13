@@ -90,12 +90,12 @@ export function Navbar({ user }: { user: User | null }) {
             <ul className="hidden items-center gap-1 md:flex">
               {navLinks.map((l) => (
                 <li key={l.href}>
-                  <a
+                  <Link
                     href={l.href}
                     className="focus-ring rounded-md px-3 py-2 text-sm text-white/70 transition-colors hover:text-white"
                   >
                     {l.label}
-                  </a>
+                  </Link>
                 </li>
               ))}
             </ul>
@@ -217,13 +217,13 @@ export function Navbar({ user }: { user: User | null }) {
             <ul className="mx-auto flex max-w-6xl flex-col gap-1 px-6 py-4">
               {navLinks.map((l) => (
                 <li key={l.href}>
-                  <a
+                  <Link
                     href={l.href}
                     onClick={() => setOpen(false)}
                     className="focus-ring block rounded-md px-3 py-3 text-sm text-white/80 hover:bg-white/5 hover:text-white"
                   >
                     {l.label}
-                  </a>
+                  </Link>
                 </li>
               ))}
 
