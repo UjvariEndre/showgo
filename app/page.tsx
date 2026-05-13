@@ -2,9 +2,10 @@ import { EventList } from "@/components/EventList";
 import { Footer } from "@/components/Footer";
 import { Hero } from "@/components/Hero";
 import { Navbar } from "@/components/Navbar";
-import { events } from "@/lib/events";
+import { getEvents } from "@/lib/events";
 
-export default function Page() {
+export default async function Page() {
+  const events = await getEvents();
   return (
     <>
       <Navbar />
