@@ -2,7 +2,8 @@
 
 import { useEffect, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import { Menu, X } from "lucide-react";
+import { Menu, Plus, X } from "lucide-react";
+import { CreateEventModal } from "./CreateEventModal";
 
 const links = [
   { href: "#home", label: "Home" },
@@ -12,6 +13,7 @@ const links = [
 
 export function Navbar() {
   const [open, setOpen] = useState(false);
+  const [createOpen, setCreateOpen] = useState(false);
 
   useEffect(() => {
     if (!open) return;
@@ -19,6 +21,11 @@ export function Navbar() {
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   }, [open]);
+
+  function openCreate() {
+    setOpen(false);
+    setCreateOpen(true);
+  }
 
   return (
     <header className="sticky top-0 z-50">
@@ -49,6 +56,16 @@ export function Navbar() {
                 </a>
               </li>
             ))}
+            <li className="ml-2">
+              <button
+                type="button"
+                onClick={openCreate}
+                className="focus-ring inline-flex items-center gap-1.5 rounded-md bg-accent-gradient px-3.5 py-2 text-sm font-medium text-white shadow-glow transition-opacity hover:opacity-95"
+              >
+                <Plus size={14} />
+                Create Event
+              </button>
+            </li>
           </ul>
 
           <button
@@ -86,10 +103,25 @@ export function Navbar() {
                   </a>
                 </li>
               ))}
+              <li>
+                <button
+                  type="button"
+                  onClick={openCreate}
+                  className="focus-ring mt-1 inline-flex w-full items-center justify-center gap-1.5 rounded-md bg-accent-gradient px-3 py-3 text-sm font-medium text-white shadow-glow transition-opacity hover:opacity-95"
+                >
+                  <Plus size={14} />
+                  Create Event
+                </button>
+              </li>
             </ul>
           </motion.div>
         )}
       </AnimatePresence>
+
+      <CreateEventModal
+        open={createOpen}
+        onClose={() => setCreateOpen(false)}
+      />
     </header>
   );
 }
