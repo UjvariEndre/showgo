@@ -19,6 +19,7 @@ import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useEffect, useState, useTransition } from "react";
 import { attendEvent, deleteEvent, leaveEvent } from "@/app/actions";
+import { useBodyScrollLock } from "@/lib/body-lock";
 import type { MusicEvent } from "@/lib/events";
 
 const dateFormatter = new Intl.DateTimeFormat("en-US", {
@@ -47,6 +48,7 @@ export function EventModal({
   canDelete = false,
   canAttend = false,
   isAttending = false,
+  onJoinPrompt,
 }: {
   event: MusicEvent | null;
   onClose: () => void;
@@ -54,8 +56,11 @@ export function EventModal({
   canDelete?: boolean;
   canAttend?: boolean;
   isAttending?: boolean;
+  /** When set (and canAttend is false), shows a "Join to attend" CTA that calls this handler. */
+  onJoinPrompt?: () => void;
 }) {
-  const showActions = canDelete || !!onEdit || canAttend;
+  const showJoin = !canAttend && !!onJoinPrompt;
+  const showActions = canDelete || !!onEdit || canAttend || showJoin;
   const router = useRouter();
   const [attendPending, startAttendTransition] = useTransition();
   const [attendError, setAttendError] = useState<string | null>(null);
@@ -64,6 +69,8 @@ export function EventModal({
   const [deletePending, startDeleteTransition] = useTransition();
   const [deleteError, setDeleteError] = useState<string | null>(null);
 
+  useBodyScrollLock(open);
+
   useEffect(() => {
     if (!open) {
       setConfirming(false);
@@ -71,8 +78,6 @@ export function EventModal({
       setAttendError(null);
       return;
     }
-    const prev = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
     const onKey = (e: KeyboardEvent) => {
       if (e.key !== "Escape") return;
       if (confirming && !deletePending) {
@@ -83,7 +88,6 @@ export function EventModal({
     };
     window.addEventListener("keydown", onKey);
     return () => {
-      document.body.style.overflow = prev;
       window.removeEventListener("keydown", onKey);
     };
   }, [open, onClose, confirming, deletePending]);
@@ -276,6 +280,16 @@ export function EventModal({
                       </p>
                     )}
                   </div>
+                )}
+                {showJoin && (
+                  <button
+                    type="button"
+                    onClick={onJoinPrompt}
+                    className="focus-ring ml-auto inline-flex items-center gap-1.5 rounded-lg bg-accent-gradient px-3.5 py-1.5 text-sm font-semibold text-white shadow-glow transition-opacity hover:opacity-95"
+                  >
+                    <Tag size={14} />
+                    Join to attend
+                  </button>
                 )}
               </div>
             )}

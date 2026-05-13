@@ -3,6 +3,8 @@
 import { useMemo, useState } from "react";
 import type { User } from "@supabase/supabase-js";
 import type { EventCategory, MusicEvent } from "@/lib/events";
+import type { AuthMode } from "@/models/auth";
+import { AuthModal } from "./AuthModal";
 import { EventCard } from "./EventCard";
 import { EventFilters, type SortKey } from "./EventFilters";
 import { EventFormModal } from "./EventFormModal";
@@ -23,6 +25,7 @@ export function EventList({
     () => new Set(),
   );
   const [sort, setSort] = useState<SortKey>("date-asc");
+  const [authMode, setAuthMode] = useState<AuthMode | null>(null);
 
   const visible = useMemo(() => {
     const filtered =
@@ -119,6 +122,7 @@ export function EventList({
             canDelete={isSelectedOwner}
             canAttend={!!user}
             isAttending={selected ? attendingIds.has(selected.id) : false}
+            onJoinPrompt={!user ? () => setAuthMode("signup") : undefined}
           />
         );
       })()}
@@ -131,6 +135,13 @@ export function EventList({
           user={user}
         />
       )}
+
+      <AuthModal
+        open={authMode !== null}
+        mode={authMode ?? "signup"}
+        onClose={() => setAuthMode(null)}
+        onSwitchMode={(next) => setAuthMode(next)}
+      />
     </section>
   );
 }

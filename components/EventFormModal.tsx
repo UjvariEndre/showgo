@@ -22,6 +22,7 @@ import {
 import { Controller, useForm, type FieldError } from "react-hook-form";
 import type { User } from "@supabase/supabase-js";
 import { createEvent, updateEvent, uploadImage } from "@/app/actions";
+import { useBodyScrollLock } from "@/lib/body-lock";
 import { EVENT_IMAGES } from "@/lib/event-images";
 import type { MusicEvent } from "@/lib/events";
 import { displayNameOf } from "@/lib/user";
@@ -97,16 +98,15 @@ export function EventFormModal({
     defaultValues: emptyValues(user),
   });
 
+  useBodyScrollLock(open);
+
   useEffect(() => {
     if (!open) return;
-    const prev = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
     const onKey = (e: KeyboardEvent) => {
       if (e.key === "Escape" && !pending) onClose();
     };
     window.addEventListener("keydown", onKey);
     return () => {
-      document.body.style.overflow = prev;
       window.removeEventListener("keydown", onKey);
     };
   }, [open, onClose, pending]);
