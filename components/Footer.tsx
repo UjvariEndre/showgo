@@ -3,7 +3,6 @@ import { Github, Instagram, Twitter } from "lucide-react";
 const links = [
   { href: "#home", label: "Home" },
   { href: "#events", label: "Events" },
-  { href: "#about", label: "About" },
 ];
 
 const socials = [
@@ -15,7 +14,6 @@ const socials = [
 export function Footer() {
   return (
     <footer
-      id="about"
       className="border-t border-white/5 bg-bg-raised/40"
       aria-label="Site footer"
     >

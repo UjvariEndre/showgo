@@ -8,7 +8,6 @@ import { CreateEventModal } from "./CreateEventModal";
 const links = [
   { href: "#home", label: "Home" },
   { href: "#events", label: "Events" },
-  { href: "#about", label: "About" },
 ];
 
 export function Navbar() {

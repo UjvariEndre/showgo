@@ -2,7 +2,14 @@
 
 import { zodResolver } from "@hookform/resolvers/zod";
 import { AnimatePresence, motion } from "framer-motion";
-import { Check, ChevronDown, ImageIcon, Loader2, X } from "lucide-react";
+import {
+  Check,
+  ChevronDown,
+  ImageIcon,
+  Loader2,
+  Upload,
+  X,
+} from "lucide-react";
 import Image from "next/image";
 import {
   forwardRef,
@@ -13,13 +20,15 @@ import {
   useTransition,
 } from "react";
 import { Controller, useForm, type FieldError } from "react-hook-form";
-import { createEvent } from "@/app/actions";
+import { createEvent, uploadImage } from "@/app/actions";
 import { EVENT_IMAGES } from "@/lib/event-images";
 import {
   EVENT_GENRES,
   eventFormSchema,
   type EventFormValues,
 } from "@/models/event";
+
+const ACCEPTED_MIMES = "image/jpeg,image/png,image/webp";
 
 const inputClasses =
   "focus-ring w-full rounded-lg border border-white/10 bg-white/[0.03] px-3 py-2 text-sm text-white placeholder:text-white/30 transition-colors hover:border-white/20 focus:border-accent-400/50 aria-[invalid=true]:border-red-500/60";
@@ -393,8 +402,11 @@ function ImagePicker({
   error?: FieldError;
 }) {
   const [open, setOpen] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const [uploadError, setUploadError] = useState<string | null>(null);
   const popoverRef = useRef<HTMLDivElement>(null);
   const triggerRef = useRef<HTMLButtonElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (!open) return;
@@ -419,7 +431,27 @@ function ImagePicker({
     };
   }, [open]);
 
-  const selected = EVENT_IMAGES.find((img) => img.url === value);
+  const curatedMatch = EVENT_IMAGES.find((img) => img.url === value);
+  const isCustomUpload = value && !curatedMatch;
+
+  async function handleFile(file: File) {
+    setUploadError(null);
+    setUploading(true);
+    try {
+      const fd = new FormData();
+      fd.append("file", file);
+      const result = await uploadImage(fd);
+      if (result.ok) {
+        onChange(result.url);
+        setOpen(false);
+      } else {
+        setUploadError(result.error);
+      }
+    } finally {
+      setUploading(false);
+      if (fileInputRef.current) fileInputRef.current.value = "";
+    }
+  }
 
   return (
     <div>
@@ -436,11 +468,21 @@ function ImagePicker({
             open ? "border-accent-400/50" : ""
           }`}
         >
-          {selected ? (
+          {curatedMatch ? (
             <span className="relative h-10 w-14 shrink-0 overflow-hidden rounded-md">
               <Image
-                src={selected.thumb}
-                alt={selected.alt}
+                src={curatedMatch.thumb}
+                alt={curatedMatch.alt}
+                fill
+                sizes="56px"
+                className="object-cover"
+              />
+            </span>
+          ) : isCustomUpload ? (
+            <span className="relative h-10 w-14 shrink-0 overflow-hidden rounded-md">
+              <Image
+                src={value}
+                alt="Uploaded cover"
                 fill
                 sizes="56px"
                 className="object-cover"
@@ -452,13 +494,28 @@ function ImagePicker({
             </span>
           )}
           <span className="flex-1 truncate">
-            {selected ? selected.alt : "Pick a cover image…"}
+            {curatedMatch
+              ? curatedMatch.alt
+              : isCustomUpload
+              ? "Your uploaded image"
+              : "Pick a cover image…"}
           </span>
           <ChevronDown
             size={16}
             className={`shrink-0 text-white/50 transition-transform ${open ? "rotate-180" : ""}`}
           />
         </button>
+
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept={ACCEPTED_MIMES}
+          className="sr-only"
+          onChange={(e) => {
+            const file = e.target.files?.[0];
+            if (file) handleFile(file);
+          }}
+        />
 
         <AnimatePresence>
           {open && (
@@ -470,7 +527,7 @@ function ImagePicker({
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -4 }}
               transition={{ duration: 0.14, ease: "easeOut" }}
-              className="absolute left-0 right-0 z-20 mt-2 max-h-72 overflow-y-auto rounded-xl border border-white/10 bg-bg-card/95 p-2 shadow-glow-lg backdrop-blur-md"
+              className="absolute left-0 right-0 z-20 mt-2 max-h-80 overflow-y-auto rounded-xl border border-white/10 bg-bg-card/95 p-2 shadow-glow-lg backdrop-blur-md"
             >
               <div className="grid grid-cols-4 gap-2 sm:grid-cols-5">
                 {EVENT_IMAGES.map((img) => {
@@ -506,11 +563,59 @@ function ImagePicker({
                     </button>
                   );
                 })}
+
+                <button
+                  type="button"
+                  role="option"
+                  aria-selected={!!isCustomUpload}
+                  disabled={uploading}
+                  onClick={() => fileInputRef.current?.click()}
+                  className={`focus-ring group relative aspect-square overflow-hidden rounded-md border-2 border-dashed transition-all ${
+                    isCustomUpload
+                      ? "border-accent-400 ring-2 ring-accent-400/60"
+                      : "border-white/15 hover:border-white/35"
+                  } disabled:cursor-wait`}
+                >
+                  {isCustomUpload && !uploading ? (
+                    <Image
+                      src={value}
+                      alt="Uploaded cover"
+                      fill
+                      sizes="(max-width: 640px) 25vw, 120px"
+                      className="object-cover"
+                    />
+                  ) : (
+                    <span className="flex h-full w-full flex-col items-center justify-center gap-1 bg-white/[0.02] text-white/65">
+                      {uploading ? (
+                        <Loader2 size={18} className="animate-spin text-accent-400" />
+                      ) : (
+                        <Upload size={16} className="text-accent-400" />
+                      )}
+                      <span className="px-1 text-center text-[10px] font-medium uppercase tracking-wider">
+                        {uploading ? "Uploading" : "Upload"}
+                      </span>
+                    </span>
+                  )}
+                  {isCustomUpload && !uploading && (
+                    <span className="absolute right-1 top-1 flex h-5 w-5 items-center justify-center rounded-full bg-accent-500 text-white shadow-glow">
+                      <Check size={12} />
+                    </span>
+                  )}
+                </button>
               </div>
+
+              <p className="mt-2 px-1 pb-1 text-[11px] text-white/40">
+                JPEG, PNG, or WebP · max 5 MB
+              </p>
             </motion.div>
           )}
         </AnimatePresence>
       </div>
+      {uploadError && (
+        <p role="alert" className="mt-1.5 text-[11px] text-red-300">
+          {uploadError}
+        </p>
+      )}
     </div>
   );
 }
