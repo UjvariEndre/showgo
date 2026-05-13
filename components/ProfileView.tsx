@@ -178,6 +178,7 @@ export function ProfileView({
           setEditing(null);
           setCreateOpen(false);
         }}
+        user={user}
       />
     </section>
   );

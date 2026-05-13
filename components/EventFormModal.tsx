@@ -20,9 +20,11 @@ import {
   useTransition,
 } from "react";
 import { Controller, useForm, type FieldError } from "react-hook-form";
+import type { User } from "@supabase/supabase-js";
 import { createEvent, updateEvent, uploadImage } from "@/app/actions";
 import { EVENT_IMAGES } from "@/lib/event-images";
 import type { MusicEvent } from "@/lib/events";
+import { displayNameOf } from "@/lib/user";
 import {
   EVENT_GENRES,
   eventFormSchema,
@@ -31,18 +33,20 @@ import {
 
 const ACCEPTED_MIMES = "image/jpeg,image/png,image/webp";
 
-const EMPTY_VALUES: EventFormValues = {
-  title: "",
-  description: "",
-  genre: undefined as unknown as EventFormValues["genre"],
-  date: "",
-  time: "",
-  location: "",
-  venue: "",
-  organizer: "",
-  about: "",
-  image_url: "",
-};
+function emptyValues(user: User): EventFormValues {
+  return {
+    title: "",
+    description: "",
+    genre: undefined as unknown as EventFormValues["genre"],
+    date: "",
+    time: "",
+    location: "",
+    venue: "",
+    organizer: displayNameOf(user),
+    about: "",
+    image_url: "",
+  };
+}
 
 function eventToValues(event: MusicEvent): EventFormValues {
   return {
@@ -66,11 +70,14 @@ export function EventFormModal({
   open,
   onClose,
   event,
+  user,
 }: {
   open: boolean;
   onClose: () => void;
   /** When present, the form is in edit mode and submits an update for this event. */
   event?: MusicEvent | null;
+  /** Used to auto-fill organizer on create; required since only authed users can open the form. */
+  user: User;
 }) {
   const isEdit = !!event;
   const [pending, startTransition] = useTransition();
@@ -87,7 +94,7 @@ export function EventFormModal({
     resolver: zodResolver(eventFormSchema),
     mode: "onTouched",
     reValidateMode: "onChange",
-    defaultValues: EMPTY_VALUES,
+    defaultValues: emptyValues(user),
   });
 
   useEffect(() => {
@@ -106,12 +113,12 @@ export function EventFormModal({
 
   useEffect(() => {
     if (open) {
-      reset(event ? eventToValues(event) : EMPTY_VALUES);
+      reset(event ? eventToValues(event) : emptyValues(user));
       setSubmitError(null);
     } else {
       setSubmitError(null);
     }
-  }, [open, event, reset]);
+  }, [open, event, user, reset]);
 
   const onSubmit = handleSubmit((values) => {
     setSubmitError(null);
@@ -207,18 +214,23 @@ export function EventFormModal({
                     {...register("description")}
                   />
 
-                  <SelectField
-                    label="Genre"
-                    options={EVENT_GENRES}
-                    error={errors.genre}
-                    {...register("genre")}
-                  />
-                  <Field
-                    label="Organizer"
-                    placeholder="Goldenvoice"
-                    error={errors.organizer}
-                    {...register("organizer")}
-                  />
+                  <div className="sm:col-span-2">
+                    <Controller
+                      control={control}
+                      name="genre"
+                      render={({ field, fieldState }) => (
+                        <GenreSelect
+                          value={field.value}
+                          onChange={(v) => {
+                            field.onChange(v);
+                            field.onBlur();
+                          }}
+                          options={EVENT_GENRES}
+                          error={fieldState.error}
+                        />
+                      )}
+                    />
+                  </div>
 
                   <Field
                     label="Date"
@@ -368,40 +380,110 @@ const TextareaField = forwardRef<HTMLTextAreaElement, TextareaProps>(
   },
 );
 
-interface SelectProps
-  extends FieldBaseProps,
-    Omit<React.SelectHTMLAttributes<HTMLSelectElement>, "className"> {
+function GenreSelect({
+  value,
+  onChange,
+  options,
+  error,
+}: {
+  value: string | undefined;
+  onChange: (value: string) => void;
   options: readonly string[];
-}
+  error?: FieldError;
+}) {
+  const [open, setOpen] = useState(false);
+  const triggerRef = useRef<HTMLButtonElement>(null);
+  const popoverRef = useRef<HTMLDivElement>(null);
 
-const SelectField = forwardRef<HTMLSelectElement, SelectProps>(
-  function SelectField({ label, error, colSpan, options, ...rest }, ref) {
-    const id = useId();
-    return (
-      <label htmlFor={id} className={colSpan === 2 ? "sm:col-span-2" : ""}>
-        <LabelText label={label} error={error} />
-        <select
-          id={id}
-          ref={ref}
+  useEffect(() => {
+    if (!open) return;
+    const onDown = (e: MouseEvent) => {
+      if (
+        popoverRef.current &&
+        !popoverRef.current.contains(e.target as Node) &&
+        triggerRef.current &&
+        !triggerRef.current.contains(e.target as Node)
+      ) {
+        setOpen(false);
+      }
+    };
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setOpen(false);
+    };
+    document.addEventListener("mousedown", onDown);
+    document.addEventListener("keydown", onKey);
+    return () => {
+      document.removeEventListener("mousedown", onDown);
+      document.removeEventListener("keydown", onKey);
+    };
+  }, [open]);
+
+  return (
+    <div>
+      <LabelText label="Genre" error={error} />
+      <div className="relative">
+        <button
+          ref={triggerRef}
+          type="button"
+          onClick={() => setOpen((v) => !v)}
+          aria-haspopup="listbox"
+          aria-expanded={open}
           aria-invalid={error ? true : undefined}
-          defaultValue=""
-          className={inputClasses}
-          {...rest}
+          className={`focus-ring flex w-full items-center justify-between gap-2 rounded-lg border border-white/10 bg-white/[0.03] px-3 py-2 text-left text-sm transition-colors hover:border-white/20 aria-[invalid=true]:border-red-500/60 ${
+            open ? "border-accent-400/50" : ""
+          } ${value ? "text-white" : "text-white/40"}`}
         >
-          <option value="" disabled className="bg-bg-card">
-            Select a genre…
-          </option>
-          {options.map((o) => (
-            <option key={o} value={o} className="bg-bg-card">
-              {o}
-            </option>
-          ))}
-        </select>
-        <ErrorText error={error} />
-      </label>
-    );
-  },
-);
+          <span className="truncate">{value || "Select a genre…"}</span>
+          <ChevronDown
+            size={16}
+            className={`shrink-0 text-white/50 transition-transform ${open ? "rotate-180" : ""}`}
+          />
+        </button>
+
+        <AnimatePresence>
+          {open && (
+            <motion.div
+              ref={popoverRef}
+              role="listbox"
+              aria-label="Genre options"
+              initial={{ opacity: 0, y: -4 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -4 }}
+              transition={{ duration: 0.14, ease: "easeOut" }}
+              className="absolute left-0 right-0 z-20 mt-2 max-h-72 overflow-y-auto rounded-xl border border-white/10 bg-bg-card/95 p-1 shadow-glow-lg backdrop-blur-md"
+            >
+              {options.map((opt) => {
+                const isSelected = opt === value;
+                return (
+                  <button
+                    key={opt}
+                    type="button"
+                    role="option"
+                    aria-selected={isSelected}
+                    onClick={() => {
+                      onChange(opt);
+                      setOpen(false);
+                    }}
+                    className={`focus-ring flex w-full items-center justify-between gap-2 rounded-lg px-3 py-2 text-left text-sm transition-colors ${
+                      isSelected
+                        ? "bg-accent-500/15 text-accent-50"
+                        : "text-white/75 hover:bg-white/[0.04] hover:text-white"
+                    }`}
+                  >
+                    <span className="truncate">{opt}</span>
+                    {isSelected && (
+                      <Check size={14} className="shrink-0 text-accent-400" />
+                    )}
+                  </button>
+                );
+              })}
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </div>
+    </div>
+  );
+}
 
 function LabelText({ label, error }: { label: string; error?: FieldError }) {
   return (

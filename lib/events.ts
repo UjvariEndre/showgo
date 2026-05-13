@@ -1,13 +1,12 @@
-import { eventRowSchema, type EventRow } from "@/models/event";
+import {
+  eventRowSchema,
+  type EventGenre,
+  type EventRow,
+} from "@/models/event";
 import { getSupabasePublic } from "./supabase-server";
 
-export type EventCategory =
-  | "Rock"
-  | "Jazz"
-  | "Electronic"
-  | "Indie"
-  | "Hip-Hop"
-  | "Classical";
+/** Backward-compatible alias — UI vocabulary calls it "category". */
+export type EventCategory = EventGenre;
 
 export interface MusicEvent {
   id: string;

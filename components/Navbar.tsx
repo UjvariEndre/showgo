@@ -296,10 +296,13 @@ export function Navbar({ user }: { user: User | null }) {
         )}
       </AnimatePresence>
 
-      <EventFormModal
-        open={createOpen}
-        onClose={() => setCreateOpen(false)}
-      />
+      {user && (
+        <EventFormModal
+          open={createOpen}
+          onClose={() => setCreateOpen(false)}
+          user={user}
+        />
+      )}
 
       <AuthModal
         open={authMode !== null}

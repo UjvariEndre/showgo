@@ -1,25 +1,19 @@
 "use client";
 
+import { AnimatePresence, motion } from "framer-motion";
 import {
   ArrowDownAZ,
   ArrowUpAZ,
   CalendarArrowDown,
   CalendarArrowUp,
+  Check,
+  ChevronDown,
+  ListFilter,
   type LucideIcon,
 } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
 import type { EventCategory } from "@/lib/events";
-
-export type GenreFilter = "All" | EventCategory;
-
-export const GENRE_FILTERS: GenreFilter[] = [
-  "All",
-  "Rock",
-  "Jazz",
-  "Electronic",
-  "Indie",
-  "Hip-Hop",
-  "Classical",
-];
+import { EVENT_GENRES } from "@/models/event";
 
 export type SortKey = "date-asc" | "date-desc" | "name-asc" | "name-desc";
 
@@ -38,44 +32,23 @@ const SORT_ICONS: Record<SortKey, LucideIcon> = {
 };
 
 export function EventFilters({
-  genre,
-  onGenreChange,
+  selectedGenres,
+  onSelectedGenresChange,
   sort,
   onSortChange,
 }: {
-  genre: GenreFilter;
-  onGenreChange: (g: GenreFilter) => void;
+  selectedGenres: Set<EventCategory>;
+  onSelectedGenresChange: (next: Set<EventCategory>) => void;
   sort: SortKey;
   onSortChange: (s: SortKey) => void;
 }) {
   const SortIcon = SORT_ICONS[sort];
   return (
     <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-      <div
-        role="radiogroup"
-        aria-label="Filter by genre"
-        className="-mx-1 flex flex-wrap items-center gap-1.5 px-1 sm:flex-nowrap sm:overflow-x-auto"
-      >
-        {GENRE_FILTERS.map((g) => {
-          const active = g === genre;
-          return (
-            <button
-              key={g}
-              type="button"
-              role="radio"
-              aria-checked={active}
-              onClick={() => onGenreChange(g)}
-              className={`focus-ring shrink-0 rounded-full border px-3 py-1.5 text-xs font-medium transition-colors ${
-                active
-                  ? "border-accent-400/50 bg-accent-500/15 text-accent-50"
-                  : "border-white/10 bg-white/[0.02] text-white/65 hover:border-white/20 hover:text-white"
-              }`}
-            >
-              {g}
-            </button>
-          );
-        })}
-      </div>
+      <GenreMultiSelect
+        selectedGenres={selectedGenres}
+        onChange={onSelectedGenresChange}
+      />
 
       <label className="flex shrink-0 items-center gap-2 text-xs text-white/55">
         <SortIcon size={14} className="text-accent-400" />
@@ -100,6 +73,134 @@ export function EventFilters({
           </span>
         </div>
       </label>
+    </div>
+  );
+}
+
+function GenreMultiSelect({
+  selectedGenres,
+  onChange,
+}: {
+  selectedGenres: Set<EventCategory>;
+  onChange: (next: Set<EventCategory>) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const triggerRef = useRef<HTMLButtonElement>(null);
+  const popoverRef = useRef<HTMLDivElement>(null);
+  const active = selectedGenres.size > 0;
+
+  useEffect(() => {
+    if (!open) return;
+    const onDown = (e: MouseEvent) => {
+      if (
+        popoverRef.current &&
+        !popoverRef.current.contains(e.target as Node) &&
+        triggerRef.current &&
+        !triggerRef.current.contains(e.target as Node)
+      ) {
+        setOpen(false);
+      }
+    };
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setOpen(false);
+    };
+    document.addEventListener("mousedown", onDown);
+    document.addEventListener("keydown", onKey);
+    return () => {
+      document.removeEventListener("mousedown", onDown);
+      document.removeEventListener("keydown", onKey);
+    };
+  }, [open]);
+
+  function toggle(genre: EventCategory) {
+    const next = new Set(selectedGenres);
+    if (next.has(genre)) next.delete(genre);
+    else next.add(genre);
+    onChange(next);
+  }
+
+  return (
+    <div className="relative shrink-0">
+      <button
+        ref={triggerRef}
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        aria-haspopup="listbox"
+        aria-expanded={open}
+        className={`focus-ring inline-flex items-center gap-2 rounded-full border px-3.5 py-1.5 text-xs font-medium transition-colors ${
+          active
+            ? "border-accent-400/50 bg-accent-500/15 text-accent-50"
+            : "border-white/10 bg-white/[0.02] text-white/70 hover:border-white/20 hover:text-white"
+        }`}
+      >
+        <ListFilter size={13} />
+        Genre
+        {active && (
+          <span className="inline-flex h-4 min-w-[18px] items-center justify-center rounded-full bg-accent-gradient px-1 text-[10px] font-semibold tabular-nums text-white shadow-glow">
+            {selectedGenres.size}
+          </span>
+        )}
+        <ChevronDown
+          size={13}
+          className={`text-current/60 transition-transform ${open ? "rotate-180" : ""}`}
+        />
+      </button>
+
+      <AnimatePresence>
+        {open && (
+          <motion.div
+            ref={popoverRef}
+            role="listbox"
+            aria-multiselectable="true"
+            aria-label="Filter by genre"
+            initial={{ opacity: 0, y: -4 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -4 }}
+            transition={{ duration: 0.14, ease: "easeOut" }}
+            className="absolute left-0 top-full z-20 mt-2 flex max-h-80 w-60 flex-col overflow-hidden rounded-xl border border-white/10 bg-bg-card/95 shadow-glow-lg backdrop-blur-md"
+          >
+            <div className="flex-1 overflow-y-auto p-1">
+              {EVENT_GENRES.map((genre) => {
+                const isSelected = selectedGenres.has(genre);
+                return (
+                  <button
+                    key={genre}
+                    type="button"
+                    role="option"
+                    aria-selected={isSelected}
+                    onClick={() => toggle(genre)}
+                    className={`flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-left text-sm transition-colors ${
+                      isSelected
+                        ? "bg-accent-500/15 text-accent-50"
+                        : "text-white/75 hover:bg-white/[0.04] hover:text-white"
+                    }`}
+                  >
+                    <span
+                      className={`flex h-4 w-4 shrink-0 items-center justify-center rounded border transition-colors ${
+                        isSelected
+                          ? "border-accent-400 bg-accent-500"
+                          : "border-white/20 bg-transparent"
+                      }`}
+                    >
+                      {isSelected && <Check size={11} className="text-white" />}
+                    </span>
+                    <span className="truncate">{genre}</span>
+                  </button>
+                );
+              })}
+            </div>
+            {active && (
+              <button
+                type="button"
+                onClick={() => onChange(new Set())}
+                className="focus-ring border-t border-white/5 px-4 py-2.5 text-left text-xs font-medium text-white/55 transition-colors hover:bg-white/[0.04] hover:text-white"
+              >
+                Clear all ({selectedGenres.size})
+              </button>
+            )}
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

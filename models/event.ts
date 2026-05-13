@@ -2,11 +2,25 @@ import { z } from "zod";
 
 export const EVENT_GENRES = [
   "Rock",
-  "Jazz",
-  "Electronic",
+  "Pop",
   "Indie",
+  "Alternative",
+  "Metal",
+  "Punk",
   "Hip-Hop",
+  "R&B",
+  "Soul",
+  "Funk",
+  "Jazz",
+  "Blues",
+  "Electronic",
+  "House",
+  "Techno",
+  "Country",
+  "Folk",
   "Classical",
+  "Reggae",
+  "Latin",
 ] as const;
 
 export const eventGenreSchema = z.enum(EVENT_GENRES);

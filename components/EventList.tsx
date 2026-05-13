@@ -2,9 +2,9 @@
 
 import { useMemo, useState } from "react";
 import type { User } from "@supabase/supabase-js";
-import type { MusicEvent } from "@/lib/events";
+import type { EventCategory, MusicEvent } from "@/lib/events";
 import { EventCard } from "./EventCard";
-import { EventFilters, type GenreFilter, type SortKey } from "./EventFilters";
+import { EventFilters, type SortKey } from "./EventFilters";
 import { EventFormModal } from "./EventFormModal";
 import { EventModal } from "./EventModal";
 
@@ -19,12 +19,16 @@ export function EventList({
 }) {
   const [selected, setSelected] = useState<MusicEvent | null>(null);
   const [editing, setEditing] = useState<MusicEvent | null>(null);
-  const [genre, setGenre] = useState<GenreFilter>("All");
+  const [selectedGenres, setSelectedGenres] = useState<Set<EventCategory>>(
+    () => new Set(),
+  );
   const [sort, setSort] = useState<SortKey>("date-asc");
 
   const visible = useMemo(() => {
     const filtered =
-      genre === "All" ? events : events.filter((e) => e.category === genre);
+      selectedGenres.size === 0
+        ? events
+        : events.filter((e) => selectedGenres.has(e.category));
     const sorted = [...filtered].sort((a, b) => {
       switch (sort) {
         case "date-asc":
@@ -38,7 +42,7 @@ export function EventList({
       }
     });
     return sorted;
-  }, [events, genre, sort]);
+  }, [events, selectedGenres, sort]);
 
   return (
     <section
@@ -61,8 +65,8 @@ export function EventList({
       </header>
 
       <EventFilters
-        genre={genre}
-        onGenreChange={setGenre}
+        selectedGenres={selectedGenres}
+        onSelectedGenresChange={setSelectedGenres}
         sort={sort}
         onSortChange={setSort}
       />
@@ -72,10 +76,10 @@ export function EventList({
           <p className="text-sm text-white/55">
             No events match the current filters.
           </p>
-          {genre !== "All" && (
+          {selectedGenres.size > 0 && (
             <button
               type="button"
-              onClick={() => setGenre("All")}
+              onClick={() => setSelectedGenres(new Set())}
               className="focus-ring mt-3 rounded-full border border-white/10 bg-white/[0.03] px-3 py-1.5 text-xs text-white/75 transition-colors hover:border-white/20 hover:text-white"
             >
               Clear genre filter
@@ -124,6 +128,7 @@ export function EventList({
           open={editing !== null}
           event={editing}
           onClose={() => setEditing(null)}
+          user={user}
         />
       )}
     </section>
