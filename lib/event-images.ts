@@ -21,7 +21,6 @@ const PHOTOS: Array<{ id: string; alt: string }> = [
   { id: "1429962714451-bb934ecdc4ec", alt: "Acoustic guitarist on a small stage" },
   { id: "1485579149621-3123dd979885", alt: "Vinyl turntable close-up" },
   { id: "1516280440614-37939bbacd81", alt: "Drum kit lit in pink and purple" },
-  { id: "1524368535928-5b5e00ddc76b", alt: "Trumpet player in a smoky room" },
   { id: "1504680177321-2e6a879aac86", alt: "String quartet rehearsing" },
 ];
 
